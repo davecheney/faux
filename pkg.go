@@ -474,6 +474,9 @@ func (p *Package) load(stk *importStack, bp *build.Package, err error) *Package 
 	imports := make([]*Package, 0, len(p.Imports))
 	deps := make(map[string]bool)
 	for i, path := range importPaths {
+		if _, ok := stdlib[path]; ok && buildContext.Compiler == "gccgo" {
+			continue
+		}
 		if path == "C" {
 			continue
 		}
