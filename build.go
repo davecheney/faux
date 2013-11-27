@@ -73,6 +73,8 @@ The build flags are shared by the build, install, run, and test commands:
 		arguments to pass on each 5c, 6c, or 8c compiler invocation.
 	-compiler name
 		name of compiler to use, as in runtime.Compiler (gccgo or gc).
+	-gccgo 'name'
+		gccgo binary to invoke
 	-gccgoflags 'arg list'
 		arguments to pass on each gccgo compiler/linker invocation.
 	-gcflags 'arg list'
@@ -149,6 +151,17 @@ func (c buildCompiler) String() string {
 	return buildContext.Compiler
 }
 
+type buildGccgo struct{}
+
+func (c buildGccgo) Set(value string) error {
+	gccgoBin = value
+	return nil
+}
+
+func (c buildGccgo) String() string {
+	return gccgoBin
+}
+
 func init() {
 	switch build.Default.Compiler {
 	case "gc":
@@ -172,6 +185,7 @@ func addBuildFlags(cmd *Command) {
 	cmd.Flag.Var((*stringsFlag)(&buildCcflags), "ccflags", "")
 	cmd.Flag.Var((*stringsFlag)(&buildLdflags), "ldflags", "")
 	cmd.Flag.Var((*stringsFlag)(&buildGccgoflags), "gccgoflags", "")
+	cmd.Flag.Var(buildGccgo{}, "gccgo", "")
 	cmd.Flag.Var((*stringsFlag)(&buildContext.BuildTags), "tags", "")
 	cmd.Flag.Var(buildCompiler{}, "compiler", "")
 	cmd.Flag.BoolVar(&buildRace, "race", false, "")
@@ -1661,7 +1675,7 @@ func (gccgoToolchain) gc(b *builder, p *Package, obj string, importArgs []string
 	if p.localPrefix != "" {
 		gcargs = append(gcargs, "-fgo-relative-import-path="+p.localPrefix)
 	}
-	args := stringList("gccgo", importArgs, "-c", gcargs, "-o", ofile, buildGccgoflags)
+	args := stringList(gccgoBin, importArgs, "-c", gcargs, "-o", ofile, buildGccgoflags)
 	for _, f := range gofiles {
 		args = append(args, mkAbs(p.Dir, f))
 	}
@@ -1677,7 +1691,7 @@ func (gccgoToolchain) asm(b *builder, p *Package, obj, ofile, sfile string) erro
 		defs = append(defs, `-D`, `GOPKGPATH="`+pkgpath+`"`)
 	}
 	defs = append(defs, b.gccArchArgs()...)
-	return b.run(p.Dir, p.ImportPath, nil, "gccgo", "-I", obj, "-o", ofile, defs, sfile)
+	return b.run(p.Dir, p.ImportPath, nil, gccgoBin, "-I", obj, "-o", ofile, defs, sfile)
 }
 
 func (gccgoToolchain) pkgpath(basedir string, p *Package) string {
@@ -1746,7 +1760,7 @@ func (tools gccgoToolchain) ld(b *builder, p *Package, out string, allactions []
 	if cxx {
 		ldflags = append(ldflags, "-lstdc++")
 	}
-	return b.run(".", p.ImportPath, nil, "gccgo", "-o", out, ofiles, "-Wl,-(", ldflags, "-Wl,-)", buildGccgoflags)
+	return b.run(".", p.ImportPath, nil, gccgoBin, "-o", out, ofiles, "-Wl,-(", ldflags, "-Wl,-)", buildGccgoflags)
 }
 
 func (gccgoToolchain) cc(b *builder, p *Package, objdir, ofile, cfile string) error {
