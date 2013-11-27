@@ -1698,7 +1698,8 @@ func (gccgoToolchain) pack(b *builder, p *Package, objDir, afile string, ofiles 
 func (tools gccgoToolchain) ld(b *builder, p *Package, out string, allactions []*action, mainpkg string, ofiles []string) error {
 	// gccgo needs explicit linking with all package dependencies,
 	// and all LDFLAGS from cgo dependencies.
-	afiles := make(map[*Package]string)
+	afiles_seen := make(map[*Package]bool)
+	afiles := []string{}
 	sfiles := make(map[*Package][]string)
 	ldflags := b.gccArchArgs()
 	cgoldflags := []string{}
@@ -1707,8 +1708,9 @@ func (tools gccgoToolchain) ld(b *builder, p *Package, out string, allactions []
 	for _, a := range allactions {
 		if a.p != nil {
 			if !a.p.Standard {
-				if afiles[a.p] == "" || a.objpkg != a.target {
-					afiles[a.p] = a.target
+				if !afiles_seen[a.p] || a.objpkg != a.target {
+					afiles_seen[a.p] = true
+					afiles = append(afiles, a.target)
 				}
 			}
 			cgoldflags = append(cgoldflags, a.p.CgoLDFLAGS...)
