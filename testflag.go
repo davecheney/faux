@@ -79,6 +79,7 @@ var testFlagDefn = []*testFlagSpec{
 	{name: "gcflags"},
 	{name: "ldflags"},
 	{name: "gccgoflags"},
+	{name: "gccgo"},
 	{name: "tags"},
 	{name: "compiler"},
 	{name: "race", boolVar: &buildRace},
@@ -169,6 +170,8 @@ func testFlags(args []string) (packageNames, passToTest []string) {
 			if err != nil {
 				fatalf("invalid flag argument for -%s: %v", f.name, err)
 			}
+		case "gccgo":
+			gccgoBin = value
 		case "tags":
 			buildContext.BuildTags = strings.Fields(value)
 		case "compiler":
