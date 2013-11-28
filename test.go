@@ -532,6 +532,9 @@ func (b *builder) test(p *Package) (buildAction, runAction, printAction *action,
 	var stk importStack
 	stk.push(p.ImportPath + "_test")
 	for _, path := range p.TestImports {
+		if _, ok := stdlib[path]; ok && buildContext.Compiler == "gccgo" {
+			continue
+		}
 		p1 := loadImport(path, p.Dir, &stk, p.build.TestImportPos[path])
 		if p1.Error != nil {
 			return nil, nil, nil, p1.Error
@@ -539,6 +542,9 @@ func (b *builder) test(p *Package) (buildAction, runAction, printAction *action,
 		imports = append(imports, p1)
 	}
 	for _, path := range p.XTestImports {
+		if _, ok := stdlib[path]; ok && buildContext.Compiler == "gccgo" {
+			continue
+		}
 		if path == p.ImportPath {
 			continue
 		}
@@ -665,11 +671,13 @@ func (b *builder) test(p *Package) (buildAction, runAction, printAction *action,
 	stk.push("testmain")
 	for dep := range testMainDeps {
 		if ptest.ImportPath != dep {
-			p1 := loadImport("testing", "", &stk, nil)
-			if p1.Error != nil {
-				return nil, nil, nil, p1.Error
+			if buildContext.Compiler != "gccgo" {
+				p1 := loadImport("testing", "", &stk, nil)
+				if p1.Error != nil {
+					return nil, nil, nil, p1.Error
+				}
+				pmain.imports = append(pmain.imports, p1)
 			}
-			pmain.imports = append(pmain.imports, p1)
 		}
 	}
 
